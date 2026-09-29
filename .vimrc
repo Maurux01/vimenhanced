@@ -1,8 +1,10 @@
 " ============================================================
-"  vimenhanced - vimrc 100% Vimscript (no Lua)
+"  vimenhanced - vimrc 100% Vimscript (no Lua, no LSP)
 "  - Line numbers on every line
 "  - No ~ on empty lines
-"  - Pretty autocomplete + LSP (vim-lsp)
+"  - Dark themes: gruvbox / catppuccin / habamax (<leader>th to cycle)
+"  - Syntax highlight + auto-close "" '' {} [] ()
+"  - Pretty autocomplete popup (native, no plugins needed)
 " ============================================================
 
 " --- Basics ---
@@ -31,7 +33,7 @@ augroup HideTildes
   autocmd ColorScheme,VimEnter * highlight! link NonText Ignore
 augroup END
 
-" --- 3. Pretty look (Vim only) ---
+" --- 3. Pretty look ---
 if has('termguicolors')
   set termguicolors
 endif
@@ -43,18 +45,80 @@ set signcolumn=yes
 set shortmess+=c
 set belloff=all
 set novisualbell
-
-silent! colorscheme habamax
 if has('gui_running')
   set guifont=Consolas:h11
   set lines=35 columns=110
 endif
 
-highlight Pmenu      ctermfg=255 ctermbg=237 guifg=#eeeeee guibg=#3a3a3a
-highlight PmenuSel   ctermfg=16  ctermbg=110 guifg=#000000 guibg=#87afff cterm=bold gui=bold
-highlight PmenuSbar  ctermbg=238 guibg=#4a4a4a
-highlight PmenuThumb ctermbg=110 guibg=#87afff
-highlight CursorLineNr ctermfg=110 cterm=bold guifg=#87afff gui=bold
+" --- 4. Plugins (Vimscript only, no Lua, no LSP) ---
+" vim-plug bootstrap (Windows and Linux)
+let s:plug_vim = expand('~/.vim/autoload/plug.vim')
+let s:plug_dir = expand('~/.vim/plugged')
+if has('win32') || has('win64')
+  let s:plug_vim = expand('~/vimfiles/autoload/plug.vim')
+  let s:plug_dir = expand('~/vimfiles/plugged')
+endif
+if empty(glob(s:plug_vim))
+  if has('win32') || has('win64')
+    silent! !powershell -NoProfile -Command "New-Item -ItemType Directory -Force $HOME/vimfiles/autoload | Out-Null; Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim -OutFile $HOME/vimfiles/autoload/plug.vim"
+  else
+    silent! !curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  endif
+  augroup PlugBootstrap
+    autocmd!
+    autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+  augroup END
+endif
+
+if filereadable(s:plug_vim)
+  call plug#begin(s:plug_dir)
+    " Dark themes (all dark)
+    Plug 'morhetz/gruvbox'
+    Plug 'catppuccin/vim', { 'as': 'catppuccin' }
+    " Auto-close "" '' {} [] () (pure Vimscript)
+    Plug 'jiangmiao/auto-pairs'
+  call plug#end()
+endif
+
+" --- 5. Themes: gruvbox / catppuccin (mocha) / habamax, all dark ---
+" Change with: :ThemeGruvbox | :ThemeCatppuccin | :ThemeHabamax
+" or cycle with <leader>th (default leader is \)
+let g:vimenhanced_theme = get(g:, 'vimenhanced_theme', 'gruvbox')
+let s:themes = ['gruvbox', 'catppuccin_mocha', 'habamax']
+
+" gruvbox options (must be set before colorscheme)
+let g:gruvbox_contrast_dark = 'hard'
+let g:gruvbox_invert_selection = 0
+" catppuccin options (vim port)
+let g:catppuccin_flavour = 'mocha'
+
+function! VimenhancedTheme(name) abort
+  let g:vimenhanced_theme = a:name
+  set background=dark
+  silent! execute 'colorscheme ' . a:name
+  " re-apply pretty popup + line-number color after theme wins
+  highlight Pmenu      ctermfg=255 ctermbg=237 guifg=#eeeeee guibg=#3a3a3a
+  highlight PmenuSel   ctermfg=16  ctermbg=110 guifg=#000000 guibg=#87afff cterm=bold gui=bold
+  highlight PmenuSbar  ctermbg=238 guibg=#4a4a4a
+  highlight PmenuThumb ctermbg=110 guibg=#87afff
+  highlight CursorLineNr ctermfg=110 cterm=bold guifg=#87afff gui=bold
+  highlight MatchParen cterm=bold gui=bold ctermfg=220 guifg=#e5c07b ctermbg=238 guibg=#4a4a4a
+endfunction
+
+function! VimenhancedNextTheme() abort
+  let l:idx = index(s:themes, g:vimenhanced_theme)
+  let l:next = s:themes[(l:idx + 1) % len(s:themes)]
+  call VimenhancedTheme(l:next)
+  echo 'theme: ' . l:next
+endfunction
+
+command! ThemeGruvbox    call VimenhancedTheme('gruvbox')
+command! ThemeCatppuccin call VimenhancedTheme('catppuccin_mocha')
+command! ThemeHabamax    call VimenhancedTheme('habamax')
+nnoremap <silent> <leader>th :call VimenhancedNextTheme()<CR>
+
+" Apply saved theme (silent until :PlugInstall downloads them)
+silent! call VimenhancedTheme(g:vimenhanced_theme)
 
 " Pretty mode colors for the statusline
 highlight ModeNormal  ctermfg=16 ctermbg=110 cterm=bold guifg=#000000 guibg=#87afff gui=bold
@@ -104,7 +168,20 @@ augroup END
 
 set statusline=%{StatusModeSegment()}\ %F\ %m%r%h%w\ %*%=%y\ [%{&ff}]\ %l:%c\ %p%%
 
-" --- 4. Pretty native autocomplete ---
+" --- 6. Syntax highlight extras ---
+syntax enable
+set showmatch
+set matchtime=2
+set hlsearch
+set incsearch
+highlight Search ctermfg=16 ctermbg=221 guifg=#000000 guibg=#e5c07b
+
+augroup FiletypeIndent
+  autocmd!
+  autocmd FileType python,javascript,typescript,go,rust,c,cpp,java,lua,sh,bash,vim,html,css,json,yaml setlocal shiftwidth=2 tabstop=2 expandtab
+augroup END
+
+" --- 7. Pretty native autocomplete (no plugins) ---
 set complete=.,w,b,u,t
 set completeopt=menu,menuone,noinsert,noselect,popup
 set pumheight=10
@@ -130,10 +207,10 @@ augroup FiletypeOmni
   autocmd FileType xml        setlocal omnifunc=xmlcomplete#Complete
 augroup END
 
-" Tab / Shift-Tab / Enter (also works with asyncomplete below)
+" Tab / Shift-Tab / Enter (native popup only, no asyncomplete)
 inoremap <expr> <Tab>   pumvisible() ? "\<C-n>" : "\<Tab>"
 inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
-inoremap <expr> <CR>    pumvisible() ? asyncomplete#close_popup() : "\<CR>"
+inoremap <expr> <CR>    pumvisible() ? "\<C-y>" : "\<CR>"
 inoremap <expr> <Down>  pumvisible() ? "\<C-n>" : "\<Down>"
 inoremap <expr> <Up>    pumvisible() ? "\<C-p>" : "\<Up>"
 inoremap <C-Space> <C-n>
@@ -143,248 +220,18 @@ augroup ClosePreview
   autocmd CompleteDone * if !pumvisible() | pclose | endif
 augroup END
 
-" ============================================================
-" --- 5. LSP PLUGINS (Vimscript only, no Lua) ---
-" Requires Vim 8.0+ with +job +channel +timers.
-" Install with: :PlugInstall
-" ============================================================
-if has('job') && has('channel') && has('timers')
-  " Auto-install vim-plug if missing (Windows and Linux)
-  let s:plug_vim = expand('~/.vim/autoload/plug.vim')
-  if has('win32') || has('win64')
-    let s:plug_vim = expand('~/vimfiles/autoload/plug.vim')
-  endif
-  if empty(glob(s:plug_vim))
-    if has('win32') || has('win64')
-      silent! !powershell -NoProfile -Command "New-Item -ItemType Directory -Force $HOME/vimfiles/autoload | Out-Null; Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim -OutFile $HOME/vimfiles/autoload/plug.vim"
-    else
-      silent! !curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-    endif
-    augroup PlugBootstrap
-      autocmd!
-      autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
-    augroup END
-  endif
+" --- 8. Auto-close "" '' {} [] () ---
+" Main engine: auto-pairs plugin (pure Vimscript).
+" Fallback below only loads if the plugin is missing (fresh install
+" before first :PlugInstall), so typing quotes/brackets never breaks.
+let g:AutoPairsFlyMode = 0
+let g:AutoPairsShortcutFastWrap = '<C-e>'
 
-  call plug#begin(expand('~/.vim/plugged'))
-    Plug 'prabirshrestha/vim-lsp'
-    Plug 'mattn/vim-lsp-settings'
-    Plug 'prabirshrestha/asyncomplete.vim'
-    Plug 'prabirshrestha/asyncomplete-lsp.vim'
-    Plug 'prabirshrestha/asyncomplete-file.vim'
-    Plug 'prabirshrestha/asyncomplete-buffer.vim'
-  call plug#end()
-
-  " --- 5a. asyncomplete: automatic popup while typing ---
-  let g:asyncomplete_auto_popup = 1
-  let g:asyncomplete_auto_completeopt = 1
-  let g:asyncomplete_popup_delay = 200
-  au User asyncomplete_setup call asyncomplete#register_source(asyncomplete#sources#file#get_source_options({
-        \ 'name': 'file',
-        \ 'allowlist': ['*'],
-        \ 'priority': 10,
-        \ 'completor': function('asyncomplete#sources#file#completor')
-        \ }))
-  au User asyncomplete_setup call asyncomplete#register_source(asyncomplete#sources#buffer#get_source_options({
-        \ 'name': 'buffer',
-        \ 'allowlist': ['*'],
-        \ 'priority': 5,
-        \ 'completor': function('asyncomplete#sources#buffer#completor')
-        \ }))
-
-  " --- 5b. vim-lsp: behavior ---
-  let g:lsp_diagnostics_enabled = 1
-  let g:lsp_diagnostics_echo_cursor = 1
-  let g:lsp_diagnostics_float_cursor = 1
-  let g:lsp_signs_enabled = 1
-  let g:lsp_diagnostics_signs_enabled = 1
-  let g:lsp_highlights_enabled = 1
-  let g:lsp_text_edit_enabled = 1
-  let g:lsp_preview_float = 1
-  let g:lsp_hover_float = 1
-  let g:lsp_completion_enabled = 1
-
-  " Format on save (only if the server supports it)
-  "let g:lsp_format_sync_timeout = 1000
-  "augroup LspFormat
-  "  autocmd!
-  "  autocmd BufWritePre *.py,*.sh,*.js,*.ts,*.lua,*.java,*.go call execute('LspDocumentFormatSync')
-  "augroup END
+if !exists('g:AutoPairsLoaded')
+  inoremap <silent> " ""<Left>
+  inoremap <silent> ' ''<Left>
+  inoremap <silent> ( ()<Left>
+  inoremap <silent> [ []<Left>
+  inoremap <silent> { {}<Left>
+  inoremap <silent> {<CR> {<CR>}<ESC>O
 endif
-
-" ============================================================
-" --- 6. LSP SERVERS BY LANGUAGE (Vimscript) ---
-" vim-lsp-settings installs most of them with :LspInstallServer
-" Manual registration below is used when the binary is in PATH.
-" Install externally with:
-"   bash: npm i -g bash-language-server
-"   python: pip install python-lsp-server ruff-lsp  (or: npm i -g pyright)
-"   go: go install golang.org/x/tools/gopls@latest
-"   lua: lua-language-server (winget/scoop/choco, apt, brew)
-"   java: jdtls (jdt-language-server, requires Java 17+)
-"   js/ts: npm i -g typescript-language-server typescript
-"   json/html/css: npm i -g vscode-langservers-extracted
-"   vim: npm i -g vim-language-server
-"   c/c++: clangd
-"   rust: rustup component add rust-analyzer
-"   yaml/docker: npm i -g yaml-language-server dockerfile-language-server-nodejs
-"   powershell (Windows): winget install Microsoft.PowerShellEditorServices
-" ============================================================
-augroup LspServers
-  autocmd!
-  " Only register if vim-lsp exists and the binary is installed
-  if exists('*lsp#register_server')
-    " Bash
-    if executable('bash-language-server')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'bash-ls',
-            \ 'cmd': {server_info->['bash-language-server', 'start']},
-            \ 'allowlist': ['sh', 'bash'],
-            \ })
-    endif
-    " Python (pylsp > pyright > ruff, uses what you have)
-    if executable('pylsp')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'pylsp',
-            \ 'cmd': {server_info->['pylsp']},
-            \ 'allowlist': ['python'],
-            \ })
-    endif
-    if executable('pyright-langserver')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'pyright',
-            \ 'cmd': {server_info->['pyright-langserver', '--stdio']},
-            \ 'allowlist': ['python'],
-            \ })
-    endif
-    if executable('ruff-lsp') || executable('ruff')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'ruff',
-            \ 'cmd': {server_info-> executable('ruff-lsp') ? ['ruff-lsp'] : ['ruff', 'server']},
-            \ 'allowlist': ['python'],
-            \ })
-    endif
-    " Go
-    if executable('gopls')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'gopls',
-            \ 'cmd': {server_info->['gopls']},
-            \ 'allowlist': ['go'],
-            \ 'initialization_options': {'usePlaceholders': v:true, 'completeUnimported': v:true},
-            \ })
-    endif
-    " Lua
-    if executable('lua-language-server')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'lua-ls',
-            \ 'cmd': {server_info->['lua-language-server']},
-            \ 'allowlist': ['lua'],
-            \ })
-    endif
-    " Java (jdtls must be in PATH)
-    if executable('jdtls')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'jdtls',
-            \ 'cmd': {server_info->['jdtls']},
-            \ 'allowlist': ['java'],
-            \ })
-    endif
-    " JS / TS
-    if executable('typescript-language-server')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'tsserver',
-            \ 'cmd': {server_info->['typescript-language-server', '--stdio']},
-            \ 'allowlist': ['javascript', 'javascriptreact', 'typescript', 'typescriptreact'],
-            \ })
-    endif
-    " JSON
-    if executable('vscode-json-languageserver')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'json-ls',
-            \ 'cmd': {server_info->['vscode-json-languageserver', '--stdio']},
-            \ 'allowlist': ['json'],
-            \ })
-    endif
-    " Vimscript
-    if executable('vim-language-server')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'vim-ls',
-            \ 'cmd': {server_info->['vim-language-server', '--stdio']},
-            \ 'allowlist': ['vim'],
-            \ })
-    endif
-    " C / C++
-    if executable('clangd')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'clangd',
-            \ 'cmd': {server_info->['clangd']},
-            \ 'allowlist': ['c', 'cpp', 'objc', 'objcpp'],
-            \ })
-    endif
-    " Rust
-    if executable('rust-analyzer')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'rust-analyzer',
-            \ 'cmd': {server_info->['rust-analyzer']},
-            \ 'allowlist': ['rust'],
-            \ })
-    endif
-    " HTML / CSS (separate from JSON)
-    if executable('vscode-html-languageserver')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'html-ls',
-            \ 'cmd': {server_info->['vscode-html-languageserver', '--stdio']},
-            \ 'allowlist': ['html'],
-            \ })
-    endif
-    if executable('vscode-css-languageserver')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'css-ls',
-            \ 'cmd': {server_info->['vscode-css-languageserver', '--stdio']},
-            \ 'allowlist': ['css', 'scss', 'less'],
-            \ })
-    endif
-    " YAML / Docker
-    if executable('yaml-language-server')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'yaml-ls',
-            \ 'cmd': {server_info->['yaml-language-server', '--stdio']},
-            \ 'allowlist': ['yaml'],
-            \ })
-    endif
-    if executable('docker-langserver')
-      autocmd User lsp_setup call lsp#register_server({
-            \ 'name': 'docker-ls',
-            \ 'cmd': {server_info->['docker-langserver', '--stdio']},
-            \ 'allowlist': ['dockerfile'],
-            \ })
-    endif
-  endif
-augroup END
-
-" Go format on save (goimports if available, else gofmt)
-augroup GoFormat
-  autocmd!
-  autocmd BufWritePre *.go if executable('goimports') | silent! !goimports -w % | edit! | else | silent! !gofmt -w % | edit! | endif
-augroup END
-
-" --- 7. LSP keymaps (only active when a server is attached) ---
-function! s:SetupLspMappings() abort
-  if exists('*lsp#definition')
-    nmap <buffer> gd <plug>(lsp-definition)
-    nmap <buffer> gr <plug>(lsp-references)
-    nmap <buffer> gi <plug>(lsp-implementation)
-    nmap <buffer> gt <plug>(lsp-type-definition)
-    nmap <buffer> K  <plug>(lsp-hover)
-    nmap <buffer> <leader>rn <plug>(lsp-rename)
-    nmap <buffer> <leader>ca <plug>(lsp-code-action)
-    nmap <buffer> <leader>f  <plug>(lsp-document-format)
-    nmap <buffer> [g <plug>(lsp-previous-diagnostic)
-    nmap <buffer> ]g <plug>(lsp-next-diagnostic)
-    setlocal omnifunc=lsp#complete
-  endif
-endfunction
-augroup LspKeymaps
-  autocmd!
-  autocmd User lsp_buffer_enabled call s:SetupLspMappings()
-augroup END

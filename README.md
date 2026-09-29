@@ -1,33 +1,34 @@
 # vimenhanced
 
-Pretty Vim config in **100% Vimscript (no Lua, no Neovim required)** with line numbers, no `~` noise, a nice autocomplete popup, and optional LSP for many languages.
+Pretty Vim config in **100% Vimscript (no Lua, no Neovim required, no LSP)** with line numbers, no `~` noise, dark changeable themes, syntax highlight, auto-close pairs and a nice autocomplete popup.
 
 ## Features
 
 - Line numbers (`set number`), ruler, sign column (no layout jumps)
 - No `~` on empty lines (`fillchars=eob: ` + `EndOfBuffer` highlight)
+- Dark themes, all dark (changeable):
+  - `gruvbox` (default), `catppuccin_mocha`, `habamax`
+  - `:ThemeGruvbox` | `:ThemeCatppuccin` | `:ThemeHabamax`
+  - `<leader>th` (default leader `\`) to cycle
+- Syntax highlight: `syntax on` + `showmatch` + `hlsearch`/`incsearch` + 2-space indent per filetype
+- Auto-close `"" '' {} [] ()` via `jiangmiao/auto-pairs` (pure Vimscript) + native fallback before first `:PlugInstall`
 - Pretty popup menu (`Pmenu` / `PmenuSel`), `cursorline`, `termguicolors`, mode-aware statusline (`NORMAL` / `INSERT` / `VISUAL` / ...) with per-mode colors
-- Pretty autocomplete:
+- Pretty autocomplete (native, no plugins):
   - Insert mode: `completeopt=menu,menuone,noinsert,noselect,popup`, `pumheight=10`
   - Command line: `wildmenu` + `wildmode=longest:full,full`
   - `Tab` / `Shift-Tab` to navigate, `Enter` to accept, `Ctrl-Space` to trigger
-- LSP via `vim-lsp` + `vim-lsp-settings` + `asyncomplete` (all Vimscript):
-  - Bash, Python (`pylsp` / `pyright` / `ruff`), Go (`gopls`), Lua, Java (`jdtls`),
-    JS/TS, JSON/HTML/CSS, Vimscript, C/C++ (`clangd`), Rust, YAML, Dockerfile
 
 ## Files
 
 | File | Purpose |
 | ---- | ------- |
 | `.vimrc` | Main config (English, Vimscript only) |
-| `install.sh` | Linux installer (auto-detects Debian vs Arch) |
+| `install.sh` | Linux installer (auto-detects Debian vs Arch, installs `vim git curl` + `vim-plug` + plugins) |
 
 ## Quick install
 
 ```bash
 ./install.sh
-./install.sh --minimal
-./install.sh --no-lsp
 ./install.sh --only-config
 ```
 
@@ -36,38 +37,33 @@ What it does:
 1. Detects your distro via `/etc/os-release`:
    - Debian family (Debian/Ubuntu/Mint/Pop/Kali) → `apt-get`
    - Arch family (Arch/Manjaro/EndeavourOS/Artix/CachyOS) → `pacman`
-2. Installs `vim git curl nodejs npm python3 go` with your package manager
+2. Installs `vim git curl` with your package manager
 3. Installs `vim-plug` to `~/.vim/autoload/plug.vim`
 4. Backs up `~/.vimrc` to `~/.vimrc.bak` (once) and copies `.vimrc` to `~/.vimrc`
-5. Installs LSP servers with `npm` / `pip` / `go install`
-6. Runs `vim +PlugInstall --sync +qall`
+5. Runs `vim +PlugInstall --sync +qall` (themes + autopairs)
 
-## Manual install
+## Manual install (plugins window)
 
 1. Install `vim-plug` to `~/.vim/autoload/plug.vim`
    - From <https://github.com/junegunn/vim-plug>
 2. Copy `.vimrc` to `~/.vimrc`
-3. Open Vim and run `:PlugInstall`
+3. Open Vim and run:
 
-## LSP servers
+```vim
+:PlugInstall
+:PlugStatus
+```
 
-The config auto-registers a server only if its binary is in `PATH`. Easiest path is `:LspInstallServer` (from `vim-lsp-settings`), or install manually:
+Plugins window opens automatically with `:PlugInstall`. Other commands:
 
-| Language | Server binary | Install |
-| -------- | ------------- | ------- |
-| Bash | `bash-language-server` | `npm i -g bash-language-server` |
-| Python | `pylsp` / `pyright-langserver` / `ruff` | `pip install python-lsp-server ruff-lsp` or `npm i -g pyright` |
-| Go | `gopls` | `go install golang.org/x/tools/gopls@latest` |
-| Lua | `lua-language-server` | winget/scoop/choco, apt, brew |
-| Java | `jdtls` | jdt-language-server, requires Java 17+ |
-| JS/TS | `typescript-language-server` | `npm i -g typescript-language-server typescript` |
-| JSON/HTML/CSS | `vscode-*-languageserver` | `npm i -g vscode-langservers-extracted` |
-| Vimscript | `vim-language-server` | `npm i -g vim-language-server` |
-| C/C++ | `clangd` | system package / LLVM |
-| Rust | `rust-analyzer` | `rustup component add rust-analyzer` |
-| YAML/Docker | `yaml-language-server` / `docker-langserver` | `npm i -g yaml-language-server dockerfile-language-server-nodejs` |
+| Command | Action |
+| ------- | ------ |
+| `:PlugInstall` | Install / open plugins window |
+| `:PlugStatus` | Check status (all should be `OK`) |
+| `:PlugUpdate` | Update plugins |
+| `:PlugClean` | Remove unused plugins |
 
-Check with `:LspStatus`. Go is also formatted on save with `goimports` (fallback `gofmt`).
+Expected plugins: `gruvbox`, `catppuccin`, `auto-pairs`.
 
 ## Keymaps
 
@@ -78,20 +74,18 @@ Autocomplete (insert mode):
 | `Tab` / `Shift-Tab` | Next / previous item |
 | `Enter` | Accept selected item |
 | `Ctrl-Space` | Trigger completion |
-| `Ctrl-X Ctrl-F` | File path completion |
-| `Ctrl-X Ctrl-O` | Omni completion |
-| `Ctrl-E` / `Ctrl-Y` | Close / accept popup |
+| `Ctrl-E` | Close popup |
 
-LSP (normal mode, buffer-local when a server attaches):
+Themes:
 
-| Key | Action |
-| --- | ------ |
-| `gd` / `gr` / `gi` / `gt` | Definition / references / implementation / type |
-| `K` | Hover |
-| `<leader>rn` | Rename |
-| `<leader>ca` | Code action |
-| `<leader>f` | Format document |
-| `[g` / `]g` | Previous / next diagnostic |
+| Key / Command | Action |
+| ------------- | ------ |
+| `<leader>th` | Cycle gruvbox → catppuccin_mocha → habamax |
+| `:ThemeGruvbox` | Dark gruvbox |
+| `:ThemeCatppuccin` | Dark catppuccin mocha |
+| `:ThemeHabamax` | Dark habamax |
+
+Auto-close: just type `" ' ( [ {` and the pair closes automatically (`{<CR>` expands to block).
 
 ## Uninstall
 
@@ -101,5 +95,5 @@ LSP (normal mode, buffer-local when a server attaches):
 ## Troubleshooting
 
 - `:PlugInstall` fails: check internet access to GitHub and that `git` is installed.
-- No LSP: run `:LspStatus`, confirm the server binary is in `PATH` (`where` on Windows, `which` on Linux).
-- No popup colors: your terminal may not support `termguicolors`; the config degrades gracefully.
+- No theme colors: your terminal may not support `termguicolors`; the config degrades gracefully. Try `:ThemeHabamax` (built-in).
+- Auto-close not working before install: run `:PlugInstall` first, restart Vim.
