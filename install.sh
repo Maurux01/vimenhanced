@@ -65,10 +65,29 @@ install_debian() {
   # Debian / Ubuntu / Mint / Pop / Kali
   step "Detected Debian family: installing with apt-get"
   sudo apt-get update
+  sudo apt-get install -y curl ca-certificates gnupg
   if [[ "$MINIMAL" == "1" ]]; then
     sudo apt-get install -y vim git curl
   else
-    sudo apt-get install -y vim git curl nodejs npm python3 python3-pip golang-go
+    # Node 22 LTS via NodeSource (apt's nodejs is too old, e.g. v20 -> EBADENGINE).
+    # Only use NodeSource if current node is missing or < 22.
+    NEED_NODE=1
+    if have node; then
+      NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0)"
+      if [[ "$NODE_MAJOR" -ge 22 ]] 2>/dev/null; then
+        NEED_NODE=0
+      fi
+    fi
+    if [[ "$NEED_NODE" == "1" ]]; then
+      step "Installing Node.js 22 LTS via NodeSource"
+      curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+    fi
+    sudo apt-get install -y vim git curl nodejs python3 python3-pip golang-go
+    # Debian's separate 'npm' package can conflict with NodeSource's bundled npm.
+    # NodeSource's nodejs already includes npm, so only install npm package as fallback.
+    if ! have npm; then
+      sudo apt-get install -y npm
+    fi
   fi
 }
 
@@ -138,6 +157,24 @@ if [[ "$NO_LSP" == "1" || "$MINIMAL" == "1" ]]; then
 else
   step "Installing LSP servers"
   if have npm; then
+    # Fix EACCES: never sudo npm. Use a user-local prefix ~/.npm-global.
+    NPM_PREFIX="$HOME/.npm-global"
+    mkdir -p "$NPM_PREFIX"
+    npm config set prefix "$NPM_PREFIX"
+    export PATH="$NPM_PREFIX/bin:$PATH"
+    # Persist for future shells
+    for RC in "$HOME/.bashrc" "$HOME/.profile"; do
+      if [[ -f "$RC" ]] && ! grep -q '\.npm-global/bin' "$RC" 2>/dev/null; then
+        echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> "$RC"
+      fi
+    done
+    echo "npm prefix: $(npm config get prefix) ($(node --version 2>/dev/null || echo 'no node'))"
+    if have node; then
+      NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0)"
+      if [[ "$NODE_MAJOR" -lt 22 ]] 2>/dev/null; then
+        echo "WARNING: node v$NODE_MAJOR detected, LSP servers need Node >= 22. Re-run system install or: curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs" >&2
+      fi
+    fi
     npm install -g bash-language-server typescript-language-server typescript \
       vscode-langservers-extracted vim-language-server \
       yaml-language-server dockerfile-language-server-nodejs
