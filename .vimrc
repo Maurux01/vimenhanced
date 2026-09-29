@@ -92,17 +92,36 @@ let g:gruvbox_invert_selection = 0
 " catppuccin options (vim port)
 let g:catppuccin_flavour = 'mocha'
 
-function! VimenhancedTheme(name) abort
-  let g:vimenhanced_theme = a:name
-  set background=dark
-  silent! execute 'colorscheme ' . a:name
-  " re-apply pretty popup + line-number color after theme wins
+" NOTE: colorscheme clears ALL highlights, so Mode* + Pmenu must be
+" re-applied after every :colorscheme. Keep them in one function.
+function! VimenhancedHighlights() abort
   highlight Pmenu      ctermfg=255 ctermbg=237 guifg=#eeeeee guibg=#3a3a3a
   highlight PmenuSel   ctermfg=16  ctermbg=110 guifg=#000000 guibg=#87afff cterm=bold gui=bold
   highlight PmenuSbar  ctermbg=238 guibg=#4a4a4a
   highlight PmenuThumb ctermbg=110 guibg=#87afff
   highlight CursorLineNr ctermfg=110 cterm=bold guifg=#87afff gui=bold
   highlight MatchParen cterm=bold gui=bold ctermfg=220 guifg=#e5c07b ctermbg=238 guibg=#4a4a4a
+  highlight ModeNormal  ctermfg=16 ctermbg=110 cterm=bold guifg=#000000 guibg=#87afff gui=bold
+  highlight ModeInsert  ctermfg=16 ctermbg=150 cterm=bold guifg=#000000 guibg=#a9dc76 gui=bold
+  highlight ModeVisual  ctermfg=16 ctermbg=176 cterm=bold guifg=#000000 guibg=#d19df0 gui=bold
+  highlight ModeReplace ctermfg=16 ctermbg=203 cterm=bold guifg=#000000 guibg=#e06c75 gui=bold
+  highlight ModeCommand ctermfg=16 ctermbg=221 cterm=bold guifg=#000000 guibg=#e5c07b gui=bold
+  highlight ModeOther   ctermfg=16 ctermbg=247 cterm=bold guifg=#000000 guibg=#9e9e9e gui=bold
+  " pretty base statusline to match dark themes
+  highlight StatusLine   ctermfg=255 ctermbg=237 guifg=#eeeeee guibg=#3a3a3a
+  highlight StatusLineNC ctermfg=247 ctermbg=235 guifg=#9e9e9e guibg=#2a2a2a
+endfunction
+
+augroup VimenhancedHighlights
+  autocmd!
+  autocmd ColorScheme * call VimenhancedHighlights()
+augroup END
+
+function! VimenhancedTheme(name) abort
+  let g:vimenhanced_theme = a:name
+  set background=dark
+  silent! execute 'colorscheme ' . a:name
+  call VimenhancedHighlights()
 endfunction
 
 function! VimenhancedNextTheme() abort
@@ -120,14 +139,6 @@ nnoremap <silent> <leader>th :call VimenhancedNextTheme()<CR>
 " Apply saved theme (silent until :PlugInstall downloads them)
 silent! call VimenhancedTheme(g:vimenhanced_theme)
 
-" Pretty mode colors for the statusline
-highlight ModeNormal  ctermfg=16 ctermbg=110 cterm=bold guifg=#000000 guibg=#87afff gui=bold
-highlight ModeInsert  ctermfg=16 ctermbg=150 cterm=bold guifg=#000000 guibg=#a9dc76 gui=bold
-highlight ModeVisual  ctermfg=16 ctermbg=176 cterm=bold guifg=#000000 guibg=#d19df0 gui=bold
-highlight ModeReplace ctermfg=16 ctermbg=203 cterm=bold guifg=#000000 guibg=#e06c75 gui=bold
-highlight ModeCommand ctermfg=16 ctermbg=221 cterm=bold guifg=#000000 guibg=#e5c07b gui=bold
-highlight ModeOther   ctermfg=16 ctermbg=247 cterm=bold guifg=#000000 guibg=#9e9e9e gui=bold
-
 " Current mode label: NORMAL / INSERT / VISUAL / V-LINE / V-BLOCK / etc.
 function! StatusModeLabel() abort
   let l:m = mode()
@@ -144,16 +155,32 @@ function! StatusModeLabel() abort
   endif
 endfunction
 
-" Mode segment with its own color group: %#ModeX# LABEL %*
-function! StatusModeSegment() abort
+" Full statusline builder. MUST run via %! (not %{...}) so that
+" %#Group# color switches are parsed instead of printed literally.
+" Pretty layout: [MODE] file [+] ... filetype | line:col % through file
+function! VimenhancedStatusLine() abort
   let l:label = StatusModeLabel()
-  if l:label ==# 'INSERT' | return '%#ModeInsert# ' . l:label . ' %*'
-  elseif l:label ==# 'VISUAL' || l:label ==# 'V-LINE' || l:label ==# 'V-BLOCK' || l:label ==# 'SELECT' | return '%#ModeVisual# ' . l:label . ' %*'
-  elseif l:label ==# 'REPLACE' | return '%#ModeReplace# ' . l:label . ' %*'
-  elseif l:label ==# 'COMMAND' | return '%#ModeCommand# ' . l:label . ' %*'
-  elseif l:label ==# 'TERMINAL' | return '%#ModeOther# ' . l:label . ' %*'
-  else | return '%#ModeNormal# ' . l:label . ' %*'
+  if l:label ==# 'INSERT'
+    let l:mode_hl = '%#ModeInsert#'
+  elseif l:label ==# 'VISUAL' || l:label ==# 'V-LINE' || l:label ==# 'V-BLOCK' || l:label ==# 'SELECT'
+    let l:mode_hl = '%#ModeVisual#'
+  elseif l:label ==# 'REPLACE'
+    let l:mode_hl = '%#ModeReplace#'
+  elseif l:label ==# 'COMMAND'
+    let l:mode_hl = '%#ModeCommand#'
+  elseif l:label ==# 'TERMINAL'
+    let l:mode_hl = '%#ModeOther#'
+  else
+    let l:mode_hl = '%#ModeNormal#'
   endif
+  let l:fname = expand('%:t') !=# '' ? expand('%:t') : '[No Name]'
+  let l:modified = &modified ? '  ●' : ''
+  let l:readonly = &readonly ? '  🔒' : ''
+  let l:ft = &filetype !=# '' ? &filetype : '—'
+  return l:mode_hl . '  ' . l:label . '  ' . '%*'
+        \ . '  ' . l:fname . l:modified . l:readonly . '  '
+        \ . '%=' . '  ' . l:ft . '  │  '
+        \ . line('.') . ':' . col('.') . '  │  ' . line('$') . 'L  '
 endfunction
 
 " Redraw the statusline as soon as the mode changes
@@ -166,7 +193,7 @@ augroup StatusModeRefresh
   endif
 augroup END
 
-set statusline=%{StatusModeSegment()}\ %F\ %m%r%h%w\ %*%=%y\ [%{&ff}]\ %l:%c\ %p%%
+set statusline=%!VimenhancedStatusLine()
 
 " --- 6. Syntax highlight extras ---
 syntax enable
