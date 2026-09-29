@@ -1,7 +1,12 @@
 # vimenhanced
 
 Pretty Vim config in **100% Vimscript (no Lua, no Neovim required, no LSP)** with line numbers, no `~` noise, dark-only changeable themes, VIM ASCII start banner, syntax highlight, auto-close pairs and a nice autocomplete popup.
+Debian screenshot
 <img width="1875" height="973" alt="imagen" src="https://github.com/user-attachments/assets/de902e43-36de-408c-b14a-631bba744070" />
+
+Arch screenshot
+
+
 
 ## Features
 
