@@ -1,15 +1,16 @@
 # vimenhanced
 
-Pretty Vim config in **100% Vimscript (no Lua, no Neovim required, no LSP)** with line numbers, no `~` noise, dark changeable themes, syntax highlight, auto-close pairs and a nice autocomplete popup.
+Pretty Vim config in **100% Vimscript (no Lua, no Neovim required, no LSP)** with line numbers, no `~` noise, dark-only changeable themes, VIM ASCII start banner, syntax highlight, auto-close pairs and a nice autocomplete popup.
 
 ## Features
 
 - Line numbers (`set number`), ruler, sign column (no layout jumps)
 - No `~` on empty lines (`fillchars=eob: ` + `EndOfBuffer` highlight)
-- Dark themes, all dark (changeable):
-  - `gruvbox` (default), `catppuccin_mocha`, `habamax`
-  - `:ThemeGruvbox` | `:ThemeCatppuccin` | `:ThemeHabamax`
-  - `<leader>th` (default leader `\`) to cycle
+- VIM ASCII start banner on empty startup (`:Banner` or `<leader>st` to reopen, `q` / `i` / `o` to start editing)
+- Dark-only themes (11, all dark):
+  - `gruvbox` (default), `catppuccin_mocha`, `habamax` (built-in), `dracula`, `onedark`, `nord`, `gruvbox-material`, `everforest`, `sonokai`, `molokai`, `tokyonight`
+  - `:ThemeHelp` lists them all, `:ThemeNext` or `<leader>th` (default leader `\`) cycles them
+  - Statusline, mode labels (`NORMAL` / `INSERT` / `VISUAL` / ...), popup menu and banner colors all follow the active colorscheme via a per-theme palette
 - Syntax highlight: `syntax on` + `showmatch` + `hlsearch`/`incsearch` + 2-space indent per filetype
 - Auto-close `"" '' {} [] ()` via `jiangmiao/auto-pairs` (pure Vimscript) + native fallback before first `:PlugInstall`
 - Pretty popup menu (`Pmenu` / `PmenuSel`), `cursorline`, `termguicolors`, mode-aware statusline (`NORMAL` / `INSERT` / `VISUAL` / ...) with per-mode colors
@@ -63,9 +64,17 @@ Plugins window opens automatically with `:PlugInstall`. Other commands:
 | `:PlugUpdate` | Update plugins |
 | `:PlugClean` | Remove unused plugins |
 
-Expected plugins: `gruvbox`, `catppuccin`, `auto-pairs`.
+Expected plugins: `gruvbox`, `catppuccin`, `dracula`, `onedark`, `nord-vim`, `gruvbox-material`, `everforest`, `sonokai`, `molokai`, `tokyonight-vim`, `auto-pairs`.
 
 ## Keymaps
+
+Start banner:
+
+| Key | Action |
+| --- | ------ |
+| `<leader>st` or `:Banner` | Reopen VIM ASCII banner |
+| `q` / `o` / `Enter` (in banner) | New empty buffer |
+| `i` (in banner) | New empty buffer in insert mode |
 
 Autocomplete (insert mode):
 
@@ -80,10 +89,19 @@ Themes:
 
 | Key / Command | Action |
 | ------------- | ------ |
-| `<leader>th` | Cycle gruvbox → catppuccin_mocha → habamax |
+| `<leader>th` or `:ThemeNext` | Cycle through all 11 dark themes |
+| `:ThemeHelp` | List all dark themes + current one |
 | `:ThemeGruvbox` | Dark gruvbox |
 | `:ThemeCatppuccin` | Dark catppuccin mocha |
-| `:ThemeHabamax` | Dark habamax |
+| `:ThemeHabamax` | Dark habamax (built-in, no plugin) |
+| `:ThemeDracula` | Dark dracula |
+| `:ThemeOnedark` | Dark onedark |
+| `:ThemeNord` | Dark nord |
+| `:ThemeGruvboxMaterial` | Dark gruvbox-material |
+| `:ThemeEverforest` | Dark everforest |
+| `:ThemeSonokai` | Dark sonokai |
+| `:ThemeMolokai` | Dark molokai |
+| `:ThemeTokyonight` | Dark tokyonight |
 
 Auto-close: just type `" ' ( [ {` and the pair closes automatically (`{<CR>` expands to block).
 
