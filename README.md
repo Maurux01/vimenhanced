@@ -6,7 +6,7 @@ Pretty Vim config in **100% Vimscript (no Lua, no Neovim required)** with line n
 
 - Line numbers (`set number`), ruler, sign column (no layout jumps)
 - No `~` on empty lines (`fillchars=eob: ` + `EndOfBuffer` highlight)
-- Pretty popup menu (`Pmenu` / `PmenuSel`), `cursorline`, `termguicolors`, simple statusline
+- Pretty popup menu (`Pmenu` / `PmenuSel`), `cursorline`, `termguicolors`, mode-aware statusline (`NORMAL` / `INSERT` / `VISUAL` / ...) with per-mode colors
 - Pretty autocomplete:
   - Insert mode: `completeopt=menu,menuone,noinsert,noselect,popup`, `pumheight=10`
   - Command line: `wildmenu` + `wildmode=longest:full,full`
