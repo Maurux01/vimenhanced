@@ -182,8 +182,9 @@ else
     echo "WARNING: npm not found, skipping npm servers." >&2
   fi
   if have python3; then
-    python3 -m pip install --upgrade pip || true
-    python3 -m pip install python-lsp-server ruff-lsp || true
+    # Debian 12+/Ubuntu 23+ are PEP 668 externally-managed, need --break-system-packages
+    python3 -m pip install --upgrade pip --break-system-packages 2>/dev/null || python3 -m pip install --upgrade pip || true
+    python3 -m pip install python-lsp-server ruff-lsp --break-system-packages 2>/dev/null || python3 -m pip install python-lsp-server ruff-lsp || true
   else
     echo "WARNING: python3 not found, skipping pylsp/ruff." >&2
   fi
@@ -200,7 +201,7 @@ fi
 # ----------------------------------------------------------
 if have vim; then
   step "Installing Vim plugins (:PlugInstall)"
-  vim -Nu "$DEST" +PlugInstall --sync +qall || true
+  vim -Nu "$DEST" +'PlugInstall --sync' +qall || vim -Nu "$DEST" +PlugInstall +qall || true
 else
   echo "WARNING: vim not found. Open Vim later and run :PlugInstall" >&2
 fi
